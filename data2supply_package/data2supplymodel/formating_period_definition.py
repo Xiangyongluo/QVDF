@@ -14,19 +14,21 @@ def _obtain_time_interval(hhmm_time_interval):
     end_time = datetime.datetime.strptime(
         hhmm_time_interval.split('_')[1][:2] + ':' + hhmm_time_interval.split('_')[1][2:], '%H:%M')
     end_time_minute = end_time.hour * 60 + end_time.minute
-    time_interval = end_time_minute - start_time_minute
-    return time_interval
+    return end_time_minute - start_time_minute
 
 
 def _get_index(tt):
-    time_index = np.mod(float(tt.split('_')[0][0:2]) * 60 + float(tt.split('_')[0][2:4]) - daily_starting_time, 1440)
-    return time_index
+    return np.mod(
+        float(tt.split('_')[0][:2]) * 60
+        + float(tt.split('_')[0][2:4])
+        - daily_starting_time,
+        1440,
+    )
 
 
 def _hhmm_to_minutes(time_period):
     var = time_period.split('_')[0]
-    var_minutes = float(var[0:2]) * 60 + float(var[2:4])
-    return var_minutes
+    return float(var[:2]) * 60 + float(var[2:4])
 
 
 # In[5] Step 3: convert observations to lane performance files 
@@ -48,11 +50,11 @@ def define_demand_period(period_list, measurement_file='link_performance.csv', o
         time_start = time.time()
         period_name_list.append(period_name)
         var = period_name.split('_')[0]
-        start_time_list.append(int(var[0:2]) * 60 + int(var[2:4]))
-        start_time = float(var[0:2]) * 60 + float(var[2:4])
+        start_time_list.append(int(var[:2]) * 60 + int(var[2:4]))
+        start_time = float(var[:2]) * 60 + float(var[2:4])
         var = period_name.split('_')[1]
-        end_time_list.append(float(var[0:2]) * 60 + float(var[2:4]))
-        end_time = float(var[0:2]) * 60 + float(var[2:4])
+        end_time_list.append(float(var[:2]) * 60 + float(var[2:4]))
+        end_time = float(var[:2]) * 60 + float(var[2:4])
         df = data_df[(data_df['time_minutes'] + TIME_INTERVAL_IN_MIN <= end_time) &
                      (data_df['time_minutes'] >= start_time)].copy()
         df['assignment_period'] = period_name
@@ -75,4 +77,3 @@ def define_demand_period(period_list, measurement_file='link_performance.csv', o
     all_data_df.to_csv(os.path.join(output_folder, 'corridor_measurement.csv'), index=False)
     time_end = time.time()
     return all_data_df
-    print('using time:', time_end - time_start, 's...\n')

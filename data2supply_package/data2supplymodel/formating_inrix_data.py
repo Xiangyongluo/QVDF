@@ -62,12 +62,12 @@ def _create_data_base(data_df,measurement_type,output_measurement_folder='./'):
 
         sql="""SELECT * FROM mean_tmc_link_measurement;"""
 
-        
+
 
         data_df = pd.read_sql(sql,conn)
 
         data_df['date']='Representive_day'
-    
+
     #df.to_csv(os.path.join(output_measurement_folder,'tmc_link_measurement.csv'),index=False)
 
     print('database.db DONE')
@@ -92,7 +92,7 @@ def convertInrixToLinkMeasurement(intrix_measurement_file,tmc_identification_fil
         tmc_mean_speed_dict[tmc_index]=tmc_set.speed.mean()
         tmc_reference_speed_dict[tmc_index]=tmc_set.reference_speed.mean()
         #tmc_reference_critical_speed_dict[tmc_index]=tmc_set.reference_critical_speed.mean()
-    
+
     tmc_identification_df=pd.read_csv(tmc_identification_file,encoding='UTF-8')
     #tmc_identification_df['geometry']=tmc_identification_df.apply(lambda x: "LINESTRING("+str(x.start_longitude)+' '+str(x.start_latitude)+", "+str(x.end_longitude)+' '+str(x.end_latitude)+")",axis=1)
     tmc_identification_df['reference_speed']=tmc_identification_df.apply(lambda x: tmc_reference_speed_dict[x.tmc],axis=1)
@@ -101,32 +101,33 @@ def convertInrixToLinkMeasurement(intrix_measurement_file,tmc_identification_fil
     tmc_identification_df['free_speed']=tmc_identification_df.apply(lambda x: np.ceil(x.reference_speed+2) if x.mean_speed>x.free_speed_net else x.free_speed_net,axis=1)
     tmc_identification_df.to_csv(tmc_identification_file,index=False)
     dict_type_list=['road','corridor','miles','direction','FT','AT','road_order','lanes','free_speed','capacity','LOS']
-    dict_list={}
-    for dict_type in dict_type_list:
-        dict_list[dict_type]=dict(zip(tmc_identification_df['tmc'],tmc_identification_df[dict_type]))
+    dict_list = {
+        dict_type: dict(
+            zip(tmc_identification_df['tmc'], tmc_identification_df[dict_type])
+        )
+        for dict_type in dict_type_list
+    }
+
     #print(1)
 
-    
+
     chunk_list=[]
     chunk_data_df=pd.read_csv(intrix_measurement_file,chunksize=100000)
-    # Each chunk is in df format with 100000 rows
-    iter=1
-    for sub_data_df in chunk_data_df:
-        print('Loop'+str(iter)+'...')
+    for iter, sub_data_df in enumerate(chunk_data_df, start=1):
+        print(f'Loop{str(iter)}...')
         sub_data_df=sub_data_df[['tmc','measurement_tstamp','speed']]
         # perform data filtering 
-        sub_data_df=_joinInrixField(dict_type_list,sub_data_df,dict_list,lookup_field='tmc')       
+        sub_data_df=_joinInrixField(dict_type_list,sub_data_df,dict_list,lookup_field='tmc')
         #sub_data_df=_joinInrixField(['road'],sub_data_df,tmc_identification_df,lookup_field='tmc')       
-        
+
         # Once the data appendence is done, append the chunk to list
         sub_data_df=sub_data_df[sub_data_df.road.isna()==0]
         print('start joining time fields..')
         sub_data_df['measurement_tstamp']=pd.to_datetime(sub_data_df.measurement_tstamp)
         sub_data_df['date']=pd.to_datetime(sub_data_df.measurement_tstamp).dt.date
         sub_data_df['time']=pd.to_datetime(sub_data_df.measurement_tstamp).dt.time
-        sub_data_df=convertTimeToHHMM(sub_data_df,time_interval_in_min=5)   
+        sub_data_df=convertTimeToHHMM(sub_data_df,time_interval_in_min=5)
         chunk_list.append(sub_data_df)
-        iter+=1
     data_df = pd.concat(chunk_list)
     print('join inrix fields Done..')
 

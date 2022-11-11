@@ -23,15 +23,13 @@ def _mkdir(path):
     import os
     path = path.strip()
     path = path.rstrip("\\")
-    isExists = os.path.exists(path)
-
-    if not isExists:
+    if isExists := os.path.exists(path):
+        print(path + ' the folder already exists')
+        return False
+    else:
         os.makedirs(path)
         print(path + ' create the folder sucessfully')
         return True
-    else:
-        print(path + ' the folder already exists')
-        return False
 
 
 def _obtain_time_interval(hhmm_time_interval):
@@ -41,8 +39,7 @@ def _obtain_time_interval(hhmm_time_interval):
     end_time = datetime.datetime.strptime(
         hhmm_time_interval.split('_')[1][:2] + ':' + hhmm_time_interval.split('_')[1][2:], '%H:%M')
     end_time_minute = end_time.hour * 60 + end_time.minute
-    time_interval = end_time_minute - start_time_minute
-    return time_interval
+    return end_time_minute - start_time_minute
 
 
 # In[1] input data
@@ -61,17 +58,18 @@ def _initialization(training_set):
     NUMBER_OF_RECORDS = []  # list of the number of records of assignment periods
     period_start_time_list = []
     for period in ASSIGNMENT_PERIOD:  # parsor HHMM time, period length
-        period_start_time_list.append(int(period.split('_')[0][0:2]) * 60 + int(period.split('_')[0][2:4]))
-        time_ss = [int(var[0:2]) for var in period.split('_')]
+        period_start_time_list.append(
+            int(period.split('_')[0][:2]) * 60 + int(period.split('_')[0][2:4])
+        )
+
+        time_ss = [int(var[:2]) for var in period.split('_')]
         if time_ss[0] > time_ss[1]:
             period_length = time_ss[1] + 24 - time_ss[
                 0]  # e.g. if the assignment period is 1800_0600, then we will calculate that 6-18+24=12
-            number_of_records = period_length * (
-                    60 / TIME_INTERVAL_IN_MIN)  # calculate the complete number of records in the time-series data of a link during an assignment period, e.g if  assignment period 0600_0900 should have 3 hours * 4 records (if time stamp is 15 minutes)
         else:
             period_length = time_ss[1] - time_ss[0]
-            number_of_records = period_length * (60 / TIME_INTERVAL_IN_MIN)
-
+        number_of_records = period_length * (
+                60 / TIME_INTERVAL_IN_MIN)  # calculate the complete number of records in the time-series data of a link during an assignment period, e.g if  assignment period 0600_0900 should have 3 hours * 4 records (if time stamp is 15 minutes)
         PERIOD_LENGTH.append(period_length)
         NUMBER_OF_RECORDS.append(number_of_records)
 
@@ -104,14 +102,14 @@ def _uncongested_volume_speed_function(flow, kc, mm, vf, cap):
 
     aa = kc ** mm
     bb = (kc ** mm) * ((vf ** mm) ** 0.5)
-    if cap == flow:
-        delta = 0
-    else:
-        delta = kc ** (2 * mm) * (vf ** mm) - 4 * (kc ** mm) * (flow ** mm)
+    delta = (
+        0
+        if cap == flow
+        else kc ** (2 * mm) * (vf**mm) - 4 * (kc**mm) * (flow**mm)
+    )
+
     xx = (bb + np.power(delta, 0.5)) / (2 * aa)
-    speed = np.power(np.power(xx, 2), 1 / mm)
-    # speed=speed*3600
-    return speed
+    return np.power(np.power(xx, 2), 1 / mm)
 
 
 # In[3] Calibrate traffic flow model
@@ -123,7 +121,12 @@ def _vdf_calculation_stepwise(internal_period_vdf_daily_link_df, period_index, v
     lb_fitting = [0, 0]  # upper bound and lower bound of free flow speed, alpha and beta
     ub_fitting = [10, 10]
 
-    print('1. Estimate congestion duration of link ' + str(link_id) + ' during time period:' + period_index + '...')
+    print(
+        f'1. Estimate congestion duration of link {str(link_id)} during time period:'
+        + period_index
+        + '...'
+    )
+
     X_data = []
     Y_data = []
     training_set = internal_period_vdf_daily_link_df[internal_period_vdf_daily_link_df['b_congestion_duration'] != 0]
@@ -139,14 +142,14 @@ def _vdf_calculation_stepwise(internal_period_vdf_daily_link_df, period_index, v
     training_set_0 = pd.pivot_table(training_set, values='demand_over_capacity', index=['b_congestion_duration'],
                                     aggfunc=np.mean)
     training_set_0['b_congestion_duration'] = training_set_0.index
-    training_set_0.index = range(0, len(training_set_0))
+    training_set_0.index = range(len(training_set_0))
 
     training_set_1 = pd.pivot_table(training_set, values='vc/vt2-1', index=['b_congestion_duration'], aggfunc=np.mean)
     training_set_1['b_congestion_duration'] = training_set_1.index
-    training_set_1.index = range(0, len(training_set_1))
+    training_set_1.index = range(len(training_set_1))
 
     # Step 1: y = ax^b
-    for k in range(0, len(training_set_0)):
+    for k in range(len(training_set_0)):
         # Hourly hourly_demand_over_capacity data 
         Y_data.append(training_set_0.loc[k, 'b_congestion_duration'])
         X_data.append(training_set_0.loc[k, 'demand_over_capacity'])
@@ -170,8 +173,10 @@ def _vdf_calculation_stepwise(internal_period_vdf_daily_link_df, period_index, v
     plt.plot(xvals, yvals, '--', c='b', markersize=6, label='Estimated curve')
     # plt.title('period:' + str(period_index) + ',ID:' + str(vdf_index) +
     #           ',f_d=' + str(round(popt[0], 4)) + ',n=' + str(round(popt[1], 4)))
-    plt.title('ID:' + str(vdf_index) +
-              ', fd=' + str(round(popt[0], 4)) + ', n=' + str(round(popt[1], 4)))
+    plt.title(
+        f'ID:{str(vdf_index)}, fd={str(round(popt[0], 4))}, n={str(round(popt[1], 4))}'
+    )
+
     plt.xlabel('D/C ratio')
     plt.ylabel('Congestion_duration P (hours)')
     plt.legend(loc='best')
@@ -218,12 +223,17 @@ def _vdf_calculation_stepwise(internal_period_vdf_daily_link_df, period_index, v
     lb_fitting = [0, 0]  # upper bound and lower bound of alpha and beta
     ub_fitting = [10, 10]
 
-    print('2. Estimate the lowest speed of link ' + str(link_id) + ' during time period:' + period_index + '...')
+    print(
+        f'2. Estimate the lowest speed of link {str(link_id)} during time period:'
+        + period_index
+        + '...'
+    )
+
     X_data = []
     Y_data = []
     # training_set = training_set_1.copy()
 
-    for k in range(0, len(training_set_1)):
+    for k in range(len(training_set_1)):
         # Hourly hourly_demand_over_capacity data 
         X_data.append(np.maximum(0, training_set_1.loc[k, 'vc/vt2-1']))
         Y_data.append(training_set_1.loc[k, 'b_congestion_duration'])
@@ -246,8 +256,10 @@ def _vdf_calculation_stepwise(internal_period_vdf_daily_link_df, period_index, v
 
     # plt.title('period:' + str(period_index) + ', ID:' + str(vdf_index) +
     #           ',f_p=' + str(round(popt1[0], 5)) + ',s=' + str(round(popt1[1], 3)))
-    plt.title('ID:' + str(vdf_index) +
-              ', fp=' + str(round(popt1[0], 5)) + ', s=' + str(round(popt1[1], 3)))
+    plt.title(
+        f'ID:{str(vdf_index)}, fp={str(round(popt1[0], 5))}, s={str(round(popt1[1], 3))}'
+    )
+
     plt.xlabel('Congestion duration P (hours)')
     plt.ylabel('Magnitude of speed reduction')
     plt.legend(loc='best')
@@ -310,7 +322,12 @@ def _vdf_calculation_stepwise(internal_period_vdf_daily_link_df, period_index, v
 
     # internal_period_vdf_daily_link_df['cd_alpha'] = round(popt[0], 2)
 
-    print('3. Estimate the VDF curve of link ' + str(link_id) + ' during time period:' + period_index + '...')
+    print(
+        f'3. Estimate the VDF curve of link {str(link_id)} during time period:'
+        + period_index
+        + '...'
+    )
+
     X_data = []
     Y_data = []
 
@@ -333,8 +350,10 @@ def _vdf_calculation_stepwise(internal_period_vdf_daily_link_df, period_index, v
     plt.ylabel('Mean speed during congestion duration (miles/hour)')
     plt.legend(loc='best')
     plt.grid(True)
-    plt.title('ID:' + str(vdf_index) +
-              ', alpha=' + str(round(cd_alpha, 3)) + ', beta=' + str(round(cd_beta, 3)))
+    plt.title(
+        f'ID:{str(vdf_index)}, alpha={str(round(cd_alpha, 3))}, beta={str(round(cd_beta, 3))}'
+    )
+
     plt.savefig(folder + 'DOC_vs_CD_speed' + str(period_index) + '_' + str(vdf_index) + '_' + str(link_id) + '.png')
     plt.close('all')
 
@@ -378,7 +397,7 @@ def _calculate_congestion_duration(speed_series, volume_per_lane_series, cut_off
         # if b_congestion_duration <= peak_hour:
         #     t0_index = int(peak_hour_start_time)
         #     t3_index = int(peak_hour_ending_time)
-    elif min_speed > cut_off_speed:
+    else:
         t0_index = int(peak_hour_start_time)
         t3_index = int(peak_hour_ending_time)
         b_congestion_duration = 0
@@ -394,9 +413,9 @@ def _calculate_congestion_duration(speed_series, volume_per_lane_series, cut_off
     t0 = temp_time + datetime.timedelta(minutes=time_interval_in_min) * t0_index
     t3 = temp_time + datetime.timedelta(minutes=time_interval_in_min) * (t3_index + 1)
     t2 = temp_time + datetime.timedelta(minutes=time_interval_in_min) * t2_index
-    t0 = str(t0.time())[0:5]
-    t2 = str(t2.time())[0:5]
-    t3 = str(t3.time())[0:5]
+    t0 = str(t0.time())[:5]
+    t2 = str(t2.time())[:5]
+    t3 = str(t3.time())[:5]
     t2_index_1 = temp_time.hour + t2_index * (time_interval_in_min / 60)
     DOC = demand / ultimate_capacity
     v_t2 = min_speed
