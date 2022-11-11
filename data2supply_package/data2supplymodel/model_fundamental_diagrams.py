@@ -71,7 +71,10 @@ def _calibrate_traffic_flow_model(vdf_training_set, vdf_index, sub_folder, refer
     plt.scatter(density_data, speed_data, edgecolors='r', color='r', label='outer layer', s=6, zorder=30)
     plt.legend(loc='best')
     plt.grid(True)
-    plt.title('Density-speed fundamental diagram, VDF: ' + str(vdf_index[0] + vdf_index[1] * 100))
+    plt.title(
+        f'Density-speed fundamental diagram, VDF: {str(vdf_index[0] + vdf_index[1] * 100)}'
+    )
+
     plt.xlabel('Density')
     plt.ylabel('Speed')
     plt.axis([0, 300, 0, 100])
@@ -86,7 +89,10 @@ def _calibrate_traffic_flow_model(vdf_training_set, vdf_index, sub_folder, refer
     # plt.scatter(density_data*speed_data, speed_data,edgecolors='r',color='r',label ='outer layer',zorder=30)
     plt.legend(loc='best')
     plt.grid(True)
-    plt.title('Volume-speed fundamental diagram, ID: ' + str(vdf_index[0] + vdf_index[1] * 100))
+    plt.title(
+        f'Volume-speed fundamental diagram, ID: {str(vdf_index[0] + vdf_index[1] * 100)}'
+    )
+
     plt.xlabel('Volume (vehicles per hour per lane)')
     plt.ylabel('Speed (mile/hour)')
     plt.axis([0, 2000, 0, 80])
@@ -100,7 +106,10 @@ def _calibrate_traffic_flow_model(vdf_training_set, vdf_index, sub_folder, refer
     # plt.scatter(density_data,density_data*speed_data,edgecolors='r',color='r',label ='outer layer',zorder=30)
     plt.legend(loc='best')
     plt.grid(True)
-    plt.title('Density-volume fundamental diagram,VDF: ' + str(vdf_index[0] + vdf_index[1] * 100))
+    plt.title(
+        f'Density-volume fundamental diagram,VDF: {str(vdf_index[0] + vdf_index[1] * 100)}'
+    )
+
     plt.xlabel('Density')
     plt.ylabel('Volume')
     plt.axis([0, 250, 0, 2200])
@@ -117,23 +126,20 @@ def _density_speed_function(density, free_flow_speed, critical_density, mm):
 
     k_over_k_critical = density / critical_density
     denominator = np.power(1 + np.power(k_over_k_critical, mm), 2 / mm)
-    speed = free_flow_speed / denominator
-    return speed
+    return free_flow_speed / denominator
 
 
 def _mkdir(path):
     import os
     path = path.strip()
     path = path.rstrip("\\")
-    isExists = os.path.exists(path)
-
-    if not isExists:
+    if isExists := os.path.exists(path):
+        print(path + ' the folder already exists')
+        return False
+    else:
         os.makedirs(path)
         print(path + ' create the folder sucessfully')
         return True
-    else:
-        print(path + ' the folder already exists')
-        return False
 
 
 def _obtain_time_interval(hhmm_time_interval):
@@ -143,8 +149,7 @@ def _obtain_time_interval(hhmm_time_interval):
     end_time = datetime.datetime.strptime(
         hhmm_time_interval.split('_')[1][:2] + ':' + hhmm_time_interval.split('_')[1][2:], '%H:%M')
     end_time_minute = end_time.hour * 60 + end_time.minute
-    time_interval = end_time_minute - start_time_minute
-    return time_interval
+    return end_time_minute - start_time_minute
 
 
 def _read_data(measurement_file, ft_list, at_list):
@@ -170,7 +175,7 @@ def calibrate_fundamental_diagram(ft_list='all', at_list='all', measurement_file
     output_folder = 'output_fundamental_diagrams'
     _mkdir(output_folder)
 
-    sub_folder = './' + output_folder + '/'
+    sub_folder = f'./{output_folder}/'
     training_set = _read_data(measurement_file, ft_list, at_list)
 
     vdf_index = [100 * i + j for i in training_set.AT.unique() for j in training_set.FT.unique()]

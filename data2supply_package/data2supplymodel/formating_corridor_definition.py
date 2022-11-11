@@ -5,19 +5,15 @@ import matplotlib.pyplot as plt
 
 
 def outlier_detector(speed, upper_bound, lower_bound):
-    if (speed <= upper_bound) & (speed >= lower_bound):
-        flag = 0
-    else:
-        flag = np.abs(speed - (upper_bound + lower_bound) / 2)
-    return flag
+    return (
+        0
+        if (speed <= upper_bound) & (speed >= lower_bound)
+        else np.abs(speed - (upper_bound + lower_bound) / 2)
+    )
 
 
 def outlier_detector_1(index, outlier_list):
-    if index in outlier_list:
-        flag = 1
-    else:
-        flag = 0
-    return flag
+    return 1 if index in outlier_list else 0
 
 
 def _obtain_time_interval(hhmm_time_interval):
@@ -27,8 +23,7 @@ def _obtain_time_interval(hhmm_time_interval):
     end_time = datetime.datetime.strptime(
         hhmm_time_interval.split('_')[1][:2] + ':' + hhmm_time_interval.split('_')[1][2:], '%H:%M')
     end_time_minute = end_time.hour * 60 + end_time.minute
-    time_interval = end_time_minute - start_time_minute
-    return time_interval
+    return end_time_minute - start_time_minute
 
 
 def pivot_table(data_df, corridor_name):
@@ -64,7 +59,7 @@ def pivot_table(data_df, corridor_name):
     outlier_df['date'] = outlier_df.apply(lambda x: x.name[2], axis=1)
     outlier_df['assignment_period'] = outlier_df.apply(lambda x: x.name[1], axis=1)
     outlier_df['pair'] = outlier_df.apply(lambda x: (x.link_id, x.assignment_period, x.date), axis=1)
-    outlier_df.index = range(0, len(outlier_df))
+    outlier_df.index = range(len(outlier_df))
     outlier_df.to_csv("outlier.csv")
 
     outlier_list = []

@@ -67,18 +67,18 @@ def convertLaneToLinkMeasurement(measurement_type='single_day',measurement_file=
 
 
     print('export link measurement file from database to csv')
-    
+
     if measurement_type =='single_day':
         sql="""SELECT * FROM singleday_link_measurement;"""
     elif measurement_type =='multi_day':
         sql="""SELECT * FROM multiday_link_measurement;"""       
-       
+
 
     df = pd.read_sql(sql,conn)
 
     if measurement_type == "single_day":
         df['date']='Representive_day'
-    
+
     df.to_csv(os.path.join(output_measurement_folder,'link_measurement.csv'),index=False)
 
     print('database.db DONE; link_measurement.csv DONE')
